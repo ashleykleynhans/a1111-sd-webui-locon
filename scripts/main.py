@@ -365,12 +365,32 @@ KRON_KEY = {
     "lokr_w2_b",
 }
 
+
+def assign_lora_names_to_compvis_modules(sd_model):
+    lora_layer_mapping = {}
+
+    for name, module in shared.sd_model.cond_stage_model.wrapped.named_modules():
+        lora_name = name.replace(".", "_")
+        lora_layer_mapping[lora_name] = module
+        module.lora_layer_name = lora_name
+
+    for name, module in shared.sd_model.model.named_modules():
+        lora_name = name.replace(".", "_")
+        lora_layer_mapping[lora_name] = module
+        module.lora_layer_name = lora_name
+
+    sd_model.lora_layer_mapping = lora_layer_mapping
+
+
 def load_lora(name, lora_on_disk):
     print('locon load lora method')
     lora = LoraModule(name, lora_on_disk)
     lora.mtime = os.path.getmtime(lora_on_disk.filename)
-
     sd = sd_models.read_state_dict(lora_on_disk.filename)
+
+    if not hasattr(shared.sd_model, 'lora_layer_mapping'):
+        assign_lora_names_to_compvis_modules(shared.sd_model)
+
     is_sd2 = 'model_transformer_resblocks' in shared.sd_model.lora_layer_mapping
 
     keys_failed_to_match = []
